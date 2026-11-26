@@ -177,6 +177,12 @@ footer{padding:18px 0 24px}
 .reporter-fields .fg{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:420px){.reporter-fields .fg{grid-template-columns:1fr}}
 
+
+.rest-setting{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:12px 14px;border:1px solid var(--bd);border-radius:12px;color:var(--tx);font-weight:650}
+.rest-setting input{width:20px;height:20px;accent-color:var(--ac);flex:0 0 auto}
+.rest-result{border:1px solid rgba(49,190,148,.42)}
+.rest-result .big{color:var(--ac)}
+
 </style>
 </head>
 <body>
@@ -217,6 +223,7 @@ footer{padding:18px 0 24px}
         <label>Volta do intervalo<input type="time" id="tr"></label>
         <label>Saída<input type="time" id="tf"></label>
       </div>
+      <label class="rest-setting"><input type="checkbox" id="rest11Enabled" checked> Considerar descanso mínimo de 11 horas entre jornadas</label>
       <div class="print-heading"><h2>Relatório de horários — CleitonCalc</h2></div>
       <div class="res">
         <div class="r"><small>Sair para o intervalo até</small><div class="big" id="rA">--:--</div></div>
@@ -225,6 +232,7 @@ footer{padding:18px 0 24px}
         <div class="r am"><small>Limite máximo configurado</small><div class="big" id="rD">--:--</div></div>
         <div class="r"><small>Tempo trabalhado (real)</small><div class="big" id="rE">--:--</div></div>
         <div class="r"><small>Extra realizado / saldo</small><div class="big" id="rF">--:--</div></div>
+        <div class="r rest-result"><small>Próxima entrada após 11h de descanso</small><div class="big" id="rG">--:--</div></div>
       </div>
       <div id="al" aria-live="polite"></div>
       <div class="summary" id="summary" hidden>
@@ -278,12 +286,13 @@ const tm=v=>{const m=/^(\d{1,2}):(\d{2})$/.exec(v||'');return m?+m[1]*60+ +m[2]:
 const fm=n=>{n=((Math.round(n)%1440)+1440)%1440;return pad(Math.floor(n/60))+':'+pad(n%60)};
 const dur=n=>Math.floor(n/60)+':'+pad(n%60);
 const KEY='cleitoncalc.calculadora.ponto.v1';
-let cfg={work:440,lunch:60,maxFirst:360,extra:120,reporterName:'',reporterSector:''};
+let cfg={work:440,lunch:60,maxFirst:360,extra:120,reporterName:'',reporterSector:'',rest11:true};
 try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved)cfg=Object.assign(cfg,saved)}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(cfg))}catch(e){}}
 function sync(){
   if($('#reporterName')&&document.activeElement!==$('#reporterName'))$('#reporterName').value=cfg.reporterName||'';
   if($('#reporterSector')&&document.activeElement!==$('#reporterSector'))$('#reporterSector').value=cfg.reporterSector||'';
+  if($('#rest11Enabled'))$('#rest11Enabled').checked=cfg.rest11!==false;
   document.querySelectorAll('#cw button').forEach(b=>b.classList.toggle('on',+b.dataset.w===cfg.work));
   document.querySelectorAll('#cl button').forEach(b=>b.classList.toggle('on',+b.dataset.l===cfg.lunch));
   for(const [id,v] of [['wk',fm(cfg.work)],['mf',fm(cfg.maxFirst)],['ex',fm(cfg.extra)],['lu',cfg.lunch]])if(document.activeElement!==$('#'+id))$('#'+id).value=v;
@@ -291,8 +300,9 @@ function sync(){
 let viewMode='simple';
 function calc(){
   const en=tm($('#te').value),ls=tm($('#tl').value),ret=tm($('#tr').value),fd=tm($('#tf').value),al=[];
-  let lo=null,vo=null,ex=null,lim=null,validLunch=false,actual=null,balance=null;
+  let lo=null,vo=null,ex=null,lim=null,validLunch=false,actual=null,balance=null,restStart=null;
   if(en!=null){lo=en+cfg.maxFirst;ex=en+cfg.work+cfg.lunch;lim=ex+cfg.extra}
+  if(fd!=null&&cfg.rest11!==false)restStart=fd+660;
   if(en!=null&&ls!=null){
     if(ls<=en)al.push(['e','A saída para o almoço precisa ser depois da entrada, no mesmo dia.']);
     else if(ls-en>cfg.maxFirst)al.push(['e',`O intervalo foi informado após ${dur(cfg.maxFirst)} de trabalho. O horário-limite calculado era ${fm(lo)}.`]);
@@ -322,6 +332,7 @@ function calc(){
   for(const [id,v] of [['#rA',lo],['#rB',vo],['#rC',ex],['#rD',lim]])$(id).textContent=v==null?'--:--':fm(v);
   $('#rE').textContent=actual==null?'--:--':dur(actual);
   $('#rF').textContent=balance==null?'--:--':(balance>=0?'+':'−')+dur(Math.abs(balance));
+  $('#rG').textContent=restStart==null?'--:--':fm(restStart)+(restStart>=1440?' (dia seguinte)':'');
   $('#al').innerHTML=al.map(([k,t])=>`<p class="al ${k}">${esc(t)}</p>`).join('');
   $('#summary').hidden=en==null;
   $('#sumWork').textContent=en==null?'--':dur(cfg.work);
@@ -351,7 +362,7 @@ function setMode(mode){
 function resultText(){
   const en=$('#te').value,ls=$('#tl').value,rt=$('#tr').value,fd=$('#tf').value;
   if(!en)return 'CleitonCalc — Informe a hora de entrada para calcular.';
-  return ['CleitonCalc — Resumo da jornada',`Entrada: ${en}`,`Sair para o intervalo até: ${$('#rA').textContent}`,`Saída para o almoço: ${ls||'não informada'}`,`Volta do intervalo (informada ou calculada): ${$('#rB').textContent}`,`Saída ideal: ${$('#rC').textContent}`,`Limite máximo configurado: ${$('#rD').textContent}`,`Saída real: ${fd||'não informada'}`,`Tempo trabalhado real: ${$('#rE').textContent}`,`Extra realizado / saldo: ${$('#rF').textContent}`,`Jornada diária configurada: ${dur(cfg.work)}`,`Intervalo configurado: ${dur(cfg.lunch)}`,'','Cálculo de apoio; confirme as regras com a coordenação.'].join('\n');
+  return ['CleitonCalc — Resumo da jornada',`Entrada: ${en}`,`Sair para o intervalo até: ${$('#rA').textContent}`,`Saída para o almoço: ${ls||'não informada'}`,`Volta do intervalo (informada ou calculada): ${$('#rB').textContent}`,`Saída ideal: ${$('#rC').textContent}`,`Limite máximo configurado: ${$('#rD').textContent}`,`Saída real: ${fd||'não informada'}`,`Tempo trabalhado real: ${$('#rE').textContent}`,`Extra realizado / saldo: ${$('#rF').textContent}`,`Próxima entrada após 11h de descanso: ${$('#rG').textContent}`,`Jornada diária configurada: ${dur(cfg.work)}`,`Intervalo configurado: ${dur(cfg.lunch)}`,'','Cálculo de apoio; confirme as regras com a coordenação.'].join('\n');
 }
 
 document.addEventListener('input',e=>{
@@ -437,6 +448,7 @@ function reportPoint(){
     ['Limite máximo configurado',shown('#rD')],
     ['Tempo trabalhado (real)',shown('#rE')],
     ['Extra realizado / saldo',shown('#rF')],
+    ['Próxima entrada após 11h de descanso',cfg.rest11===false?'Opção desativada':shown('#rG')],
     ['Jornada diária configurada',dur(cfg.work)],
     ['Duração do intervalo configurada',dur(cfg.lunch)],
     ['Pausa obrigatória após',dur(cfg.maxFirst)],
@@ -488,6 +500,7 @@ function reportPoint(){
 $('#exportPdf').addEventListener('click',reportPoint);
 $('#reporterName').addEventListener('input',e=>{cfg.reporterName=e.target.value;save()});
 $('#reporterSector').addEventListener('input',e=>{cfg.reporterSector=e.target.value;save()});
+$('#rest11Enabled').addEventListener('change',e=>{cfg.rest11=e.target.checked;save();calc()});
 $('#shareResult').addEventListener('click',async()=>{
   const text=resultText();
   try{
