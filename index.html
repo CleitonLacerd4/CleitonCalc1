@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CleitonCalc | Calculadora de Ponto</title>
+<meta name="description" content="Calculadora de horários de jornada e intervalo.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Figtree:wght@400;600;700&display=swap">
+<style>
+
+:root{--bg:#eef2f0;--sf:#fff;--ink:#13212a;--mu:#5b6b73;--ln:#d5ddda;--br:#0e6b52;--on:#fff;--am:#b87400;--ams:#fdf0d0;--rd:#c6362b;--rds:#fbe3e0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a1e;--sf:#16252b;--ink:#e8f0ee;--mu:#9bb0b6;--ln:#2a3c43;--br:#4cc79f;--on:#06241a;--am:#f0b13a;--ams:#3a2d10;--rd:#ff7a6e;--rds:#40201d}}
+:root[data-theme="dark"]{--bg:#0f1a1e;--sf:#16252b;--ink:#e8f0ee;--mu:#9bb0b6;--ln:#2a3c43;--br:#4cc79f;--on:#06241a;--am:#f0b13a;--ams:#3a2d10;--rd:#ff7a6e;--rds:#40201d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 Figtree,system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:0 14px 24px}
+h1,h2,h3,.big{font-family:"Bricolage Grotesque",Figtree,system-ui,sans-serif;margin:0}
+h1{font-size:1.7rem;font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.15rem;font-weight:800;margin-bottom:10px}
+h3{font-size:1rem;font-weight:600;margin:16px 0 8px}
+header{padding:18px 0 6px}
+header p{margin:2px 0 12px;color:var(--mu);font-size:.9rem}
+.tabs{display:flex;gap:4px;background:var(--sf);border:1px solid var(--ln);border-radius:12px;padding:4px;overflow-x:auto}.tabs button{white-space:nowrap;flex:1 0 auto}
+.tabs button{flex:1;border:0;background:none;color:var(--mu);font:600 .95rem Figtree,system-ui,sans-serif;padding:10px 6px;border-radius:9px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--br);color:var(--on)}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:16px;margin-top:12px}
+.mu{color:var(--mu)}
+button,input,select{font:inherit;color:var(--ink)}
+input,select{background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:9px 10px;min-height:42px;width:100%}
+label{display:block;font-size:.85rem;color:var(--mu);font-weight:600}
+label input,label select{margin-top:4px;color:var(--ink);font-weight:400}
+:focus-visible{outline:2px solid var(--br);outline-offset:2px}
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.act{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.btn{border:1px solid var(--br);background:var(--br);color:var(--on);border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
+.btn.ghost{background:none;color:var(--br)}
+.btn.danger{background:var(--rd);border-color:var(--rd);color:#fff}
+.lk{border:0;background:none;color:var(--br);font-weight:600;cursor:pointer;padding:6px}
+.lk.rm{color:var(--rd)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{border:1px solid var(--ln);background:var(--sf);border-radius:999px;padding:8px 16px;font-weight:600;cursor:pointer}
+.chips button.on{background:var(--br);border-color:var(--br);color:var(--on)}
+.bar2{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.bar2 h2{margin:0;text-transform:capitalize}
+.bar2 button{border:1px solid var(--ln);background:var(--sf);border-radius:10px;min-width:42px;min-height:42px;font-weight:700;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wd{font-size:.72rem;color:var(--mu);text-align:center;font-weight:600;padding:2px 0}
+.c{position:relative;min-height:64px;border:1px solid transparent;border-radius:8px;background:var(--bg);padding:4px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;overflow:hidden;min-width:0}
+.c.out{opacity:.45}
+.c.hol{background:var(--ams)}
+.c.sel{border-color:var(--br);box-shadow:inset 0 0 0 1px var(--br)}
+.c .n{font-style:normal;font-weight:700;font-size:.8rem;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%}
+.c.today .n{background:var(--br);color:var(--on)}
+.hn{font-size:.58rem;line-height:1.1;color:var(--am);font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.dots{display:flex;flex-wrap:wrap;gap:2px;margin-top:auto}
+.dots b{width:17px;height:17px;border-radius:50%;background:var(--c);color:#fff;font-size:.6rem;display:grid;place-items:center}
+.dots b.sem{opacity:.5}
+.dots b.comp{box-shadow:0 0 0 2px var(--am)}
+.dots b.trab{background:transparent;color:var(--c);border:1.5px solid var(--c)}
+.dots em{font-size:.62rem;font-style:normal;color:var(--mu);align-self:center}
+@media (max-width:560px){.hn{display:none}.c{min-height:56px}}
+.key{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--mu);margin-top:10px}
+.ls{list-style:none;margin:0;padding:0}
+.ls li{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--ln)}
+.ls li:first-child{border-top:0}
+.ls span{flex:1;min-width:0}
+.dot{width:14px;height:14px;border-radius:50%;flex:none}
+.tag{display:inline-block;background:var(--ams);color:var(--am);font-weight:700;font-size:.85rem;padding:3px 10px;border-radius:999px;margin:0 0 8px}
+.pill{display:inline-block;border:1px solid var(--ln);border-radius:999px;padding:2px 9px;font-size:.82rem;margin:2px 4px 2px 0}
+.pill.c2{border-color:var(--am);color:var(--am)}
+.al{margin:10px 0 0;padding:10px 12px;border-radius:10px;font-weight:600;font-size:.92rem}
+.al:empty{display:none}
+.al.e{background:var(--rds);color:var(--rd)}
+.al.w{background:var(--ams);color:var(--am)}
+.cols{display:grid;gap:12px}
+@media (min-width:760px){.cols.two{grid-template-columns:1fr 1fr;align-items:start}}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.r{border:1px solid var(--ln);border-radius:12px;padding:10px 12px;position:relative}
+.rline{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.alarm-btn{flex:none;border:1px solid var(--ln);background:var(--bg);color:var(--ink);border-radius:9px;min-width:36px;min-height:34px;padding:4px 8px;font-size:1rem;cursor:pointer}
+.alarm-btn:disabled{opacity:.35;cursor:not-allowed}
+.r.am{background:var(--ams);border-color:var(--am)}
+.r small{display:block;color:var(--mu);font-size:.8rem;font-weight:600}
+.r.am small{color:var(--am)}
+.big{font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.15}
+.bar{display:flex;height:34px;border-radius:8px;overflow:hidden;border:1px solid var(--ln);margin-top:14px}
+.bar i{display:block;min-width:2px}
+.bar .w{background:var(--br)}
+.bar .l{background:repeating-linear-gradient(45deg,var(--ln) 0 4px,var(--sf) 4px 8px)}
+.bar .x{background:repeating-linear-gradient(45deg,var(--am) 0 5px,var(--ams) 5px 10px)}
+.lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem;color:var(--mu);margin-top:8px}
+.lg b{font-variant-numeric:tabular-nums;color:var(--ink)}
+footer{text-align:center;color:var(--mu);font-size:.9rem;padding:22px 14px 8px}
+
+/* Dashboard e recursos adicionais */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+.kpi{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:14px;min-width:0}
+.kpi small{display:block;color:var(--mu);font-weight:600;font-size:.8rem}
+.kpi strong{display:block;font:800 1.8rem "Bricolage Grotesque",sans-serif;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi .hint{font-size:.76rem;color:var(--mu);margin-top:2px}
+.dashgrid{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}
+.dashlist{list-style:none;padding:0;margin:0}
+.dashlist li{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--ln)}
+.dashlist li:first-child{border-top:0}
+.dashlist .grow{flex:1;min-width:0}
+.empty{padding:16px;border:1px dashed var(--ln);border-radius:10px;color:var(--mu);text-align:center}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.tools .btn{font-size:.9rem}
+.badge-soft{display:inline-block;background:var(--bg);border:1px solid var(--ln);border-radius:999px;padding:3px 8px;font-size:.75rem;color:var(--mu)}
+@media(max-width:700px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.dashgrid{grid-template-columns:1fr}}
+@media(max-width:380px){.kpi{padding:10px}.kpi strong{font-size:1.5rem}}
+
+.hours-summary .r strong{display:block;font:800 1.45rem "Bricolage Grotesque",sans-serif;margin-top:4px;font-variant-numeric:tabular-nums}
+.hours-list{display:grid;gap:8px}
+
+.hour-row small{display:block;color:var(--mu)}
+.hour-row 
+
+.alert-list{list-style:none;padding:0;margin:0}
+.alert-list li{padding:10px 12px;border:1px solid var(--ln);border-radius:10px;margin-top:8px;background:var(--bg)}
+.alert-list li.warn{border-color:var(--am);background:var(--ams)}
+.alert-list li.error{border-color:var(--rd);background:var(--rds)}
+@media(max-width:560px){}
+[hidden]{display:none!important}
+
+header{padding:22px 0 10px}
+header .brandline{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.brandmark{width:42px;height:42px;border-radius:12px;background:var(--br);color:var(--on);display:grid;place-items:center;font-weight:800;font-family:"Bricolage Grotesque",sans-serif;font-size:1.2rem}
+.subtitle{margin:6px 0 0;color:var(--mu);font-size:.95rem}
+main{padding-bottom:12px}
+.head-actions{display:flex;gap:6px;align-items:center}
+.iconbtn{border:1px solid var(--ln);background:var(--sf);color:var(--ink);border-radius:10px;min-height:40px;padding:7px 10px;font-weight:700;cursor:pointer}
+.modebar{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.modebar button{border:1px solid var(--ln);background:var(--sf);color:var(--mu);border-radius:999px;padding:7px 12px;font-weight:700;cursor:pointer}
+.modebar button[aria-pressed="true"]{background:var(--br);border-color:var(--br);color:var(--on)}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.summary .r{background:var(--bg)}
+.summary strong{display:block;font:800 1.25rem "Bricolage Grotesque",sans-serif;margin-top:4px}
+.steps{padding-left:20px;margin:10px 0 0;color:var(--mu)}
+.steps li{padding:3px 0}
+.result-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media(max-width:420px){.head-actions .iconbtn{font-size:.78rem;padding:6px 8px}}
+
+.calcgrid{display:grid;gap:12px}
+@media(min-width:760px){.calcgrid{grid-template-columns:1.15fr .85fr;align-items:start}}
+.calc-card{margin-top:12px}
+.helper{font-size:.88rem;color:var(--mu);margin:4px 0 0}
+.res{margin-top:16px}
+.big{font-size:clamp(1.55rem,5vw,2rem)}
+footer{padding:18px 0 24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brandline">
+    <div class="brandmark">CC</div>
+    <div>
+      <h1>CleitonCalc</h1>
+      <p class="subtitle">Calculadora de ponto</p>
+    </div>
+    <div class="head-actions"><button class="iconbtn" type="button" id="themeBtn" aria-label="Alternar tema">◐ Tema</button></div>
+  </div>
+</header>
+<main>
+  <div class="card">
+    <h2>Calcule seus horários</h2>
+    <p class="helper">Informe sua entrada e, quando souber, a saída para o almoço. Os horários são calculados conforme os ajustes da jornada.</p>
+    <div class="modebar" role="group" aria-label="Modo de visualização">
+      <button type="button" id="simpleMode" aria-pressed="true">Visão simples</button>
+      <button type="button" id="guidedMode" aria-pressed="false">Passo a passo</button>
+    </div>
+  </div>
+  <div class="calcgrid">
+    <section class="card calc-card" aria-label="Calculadora de ponto">
+      <h2>Registrar o dia</h2>
+      <div class="fg">
+        <label>Hora de entrada<input type="time" id="te"></label>
+        <label>Saída para o almoço<input type="time" id="tl"></label>
+      </div>
+      <div class="res">
+        <div class="r"><small>Sair para o almoço até</small><div class="rline"><div class="big" id="rA">--:--</div><button class="alarm-btn" type="button" data-alarm="rA" aria-label="Criar alarme para sair para o almoço" title="Criar alarme">🔔</button></div></div>
+        <div class="r"><small>Volta do almoço</small><div class="rline"><div class="big" id="rB">--:--</div><button class="alarm-btn" type="button" data-alarm="rB" aria-label="Criar alarme para voltar do almoço" title="Criar alarme">🔔</button></div></div>
+        <div class="r"><small>Saída da jornada</small><div class="rline"><div class="big" id="rC">--:--</div><button class="alarm-btn" type="button" data-alarm="rC" aria-label="Criar alarme para o fim da jornada" title="Criar alarme">🔔</button></div></div>
+        <div class="r am"><small>Ficar no máximo até</small><div class="rline"><div class="big" id="rD">--:--</div><button class="alarm-btn" type="button" data-alarm="rD" aria-label="Criar alarme para o limite máximo" title="Criar alarme">🔔</button></div></div>
+      </div>
+      <div id="al" aria-live="polite"></div>
+      <div class="summary" id="summary" hidden>
+        <div class="r"><small>Tempo de trabalho</small><strong id="sumWork">--</strong></div>
+        <div class="r"><small>Intervalo previsto</small><strong id="sumLunch">--</strong></div>
+      </div>
+      <ol class="steps" id="steps" hidden></ol>
+      <div class="bar" id="bar" hidden></div>
+      <div class="lg" id="lg"></div>
+      <div class="result-actions">
+        <button class="btn" type="button" id="shareResult">Compartilhar resultado</button>
+        <button class="btn ghost" type="button" id="clearTimes">Limpar horários</button>
+      </div>
+    </section>
+    <section class="card calc-card">
+      <h2>Ajustes da jornada</h2>
+      <p class="helper">Ajuste conforme a jornada aplicável ao seu contrato ou orientação da empresa.</p>
+      <label>Jornada por dia</label>
+      <div class="chips" id="cw" style="margin:6px 0 8px">
+        <button type="button" data-w="440">7:20</button>
+        <button type="button" data-w="504">8:24</button>
+      </div>
+      <label>Outra jornada (horas:minutos)<input type="time" id="wk" value="07:20"></label>
+      <h3>Almoço</h3>
+      <div class="chips" id="cl" style="margin-bottom:8px">
+        <button type="button" data-l="60">1:00</button>
+        <button type="button" data-l="90">1:30</button>
+      </div>
+      <label>Outra duração (minutos)<input type="number" id="lu" min="0" max="240" step="5" value="60"></label>
+      <h3>Limites</h3>
+      <div class="fg">
+        <label>Pausa obrigatória após<input type="time" id="mf" value="06:00"></label>
+        <label>Máximo de hora extra<input type="time" id="ex" value="02:00"></label>
+      </div>
+      <p class="helper" style="margin-top:12px">Os ajustes ficam salvos somente neste dispositivo e navegador. Se tiver dúvida, confirme a jornada e os limites com a coordenação.</p>
+    </section>
+  </div>
+  <div class="card">
+    <p class="helper">Esta ferramenta é uma calculadora de apoio. Ela não registra ponto, não substitui o sistema oficial de controle de jornada e não valida regras trabalhistas individuais.</p>
+  </div>
+</main>
+<footer>CleitonCalc · Calculadora de Ponto</footer>
+</div>
+<script>
+const $=s=>document.querySelector(s),pad=n=>String(n).padStart(2,'0');
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tm=v=>{const m=/^(\d{1,2}):(\d{2})$/.exec(v||'');return m?+m[1]*60+ +m[2]:null};
+const fm=n=>{n=((Math.round(n)%1440)+1440)%1440;return pad(Math.floor(n/60))+':'+pad(n%60)};
+const dur=n=>Math.floor(n/60)+':'+pad(n%60);
+const KEY='cleitoncalc.calculadora.ponto.v1';
+let cfg={work:440,lunch:60,maxFirst:360,extra:120};
+try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved)cfg=Object.assign(cfg,saved)}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(cfg))}catch(e){}}
+function sync(){
+  document.querySelectorAll('#cw button').forEach(b=>b.classList.toggle('on',+b.dataset.w===cfg.work));
+  document.querySelectorAll('#cl button').forEach(b=>b.classList.toggle('on',+b.dataset.l===cfg.lunch));
+  for(const [id,v] of [['wk',fm(cfg.work)],['mf',fm(cfg.maxFirst)],['ex',fm(cfg.extra)],['lu',cfg.lunch]])if(document.activeElement!==$('#'+id))$('#'+id).value=v;
+}
+let viewMode='simple';
+function calc(){
+  const en=tm($('#te').value),ls=tm($('#tl').value),al=[];
+  let lo=null,vo=null,ex=null,lim=null,validLunch=false;
+  if(en!=null){lo=en+cfg.maxFirst;ex=en+cfg.work+cfg.lunch;lim=ex+cfg.extra}
+  if(en!=null&&ls!=null){
+    if(ls<=en)al.push(['e','A saída para o almoço precisa ser depois da entrada, no mesmo dia.']);
+    else if(ls-en>cfg.maxFirst)al.push(['e',`O intervalo foi informado após ${dur(cfg.maxFirst)} de trabalho. O horário-limite calculado era ${fm(lo)}.`]);
+    else {vo=ls+cfg.lunch;validLunch=true;}
+  }
+  if(en==null)al.push(['w','Informe a hora de entrada para calcular sua jornada.']);
+  else al.push(['w',`Horário máximo calculado para encerrar: ${fm(lim)} (inclui até ${dur(cfg.extra)} além da jornada prevista).`]);
+  for(const [id,v] of [['#rA',lo],['#rB',vo],['#rC',ex],['#rD',lim]])$(id).textContent=v==null?'--:--':fm(v);
+  document.querySelectorAll('[data-alarm]').forEach(btn=>{
+    const val=$('#'+btn.dataset.alarm).textContent;
+    btn.disabled=val==='--:--';
+  });
+  $('#al').innerHTML=al.map(([k,t])=>`<p class="al ${k}">${esc(t)}</p>`).join('');
+  $('#summary').hidden=en==null;
+  $('#sumWork').textContent=en==null?'--':dur(cfg.work);
+  $('#sumLunch').textContent=validLunch?dur(cfg.lunch):dur(cfg.lunch)+' (configurado)';
+  const steps=$('#steps');
+  steps.hidden=!(viewMode==='guided'&&en!=null);
+  steps.innerHTML=en==null?'':[
+    `Entrada registrada: ${fm(en)}`,
+    `Inicie o intervalo até: ${fm(lo)}`,
+    validLunch?`Saída para o almoço: ${fm(ls)} · retorno previsto: ${fm(vo)}`:'Informe a saída para o almoço para calcular o retorno.',
+    `Fim previsto da jornada: ${fm(ex)}`,
+    `Limite configurado com extra: ${fm(lim)}`
+  ].map(x=>`<li>${esc(x)}</li>`).join('');
+  const bar=$('#bar'),lg=$('#lg');
+  if(en==null||cfg.work<=0){bar.hidden=true;lg.innerHTML='';return}
+  const seg=validLunch?[[en,ls,'w','Trabalho'],[ls,vo,'l','Almoço'],[vo,ex,'w','Trabalho'],[ex,lim,'x','Extra configurada']]:[[en,ex,'w','Jornada prevista'],[ex,lim,'x','Extra configurada']];
+  const span=Math.max(1,lim-en);bar.hidden=false;
+  bar.innerHTML=seg.map(s=>`<i class="${s[2]}" style="width:${Math.max(0,(s[1]-s[0])/span*100)}%"></i>`).join('');
+  lg.innerHTML=seg.map(s=>`<span>${s[3]} <b>${fm(s[0])} a ${fm(s[1])}</b></span>`).join('');
+}
+function setMode(mode){
+  viewMode=mode;
+  $('#simpleMode').setAttribute('aria-pressed',String(mode==='simple'));
+  $('#guidedMode').setAttribute('aria-pressed',String(mode==='guided'));
+  calc();
+}
+function resultText(){
+  const en=$('#te').value,ls=$('#tl').value;
+  if(!en)return 'CleitonCalc — Informe a hora de entrada para calcular.';
+  return ['CleitonCalc — Resumo da jornada',`Entrada: ${en}`,`Sair para o almoço até: ${$('#rA').textContent}`,`Saída para o almoço: ${ls||'não informada'}`,`Retorno previsto: ${$('#rB').textContent}`,`Fim previsto da jornada: ${$('#rC').textContent}`,`Limite configurado com extra: ${$('#rD').textContent}`,`Jornada diária configurada: ${dur(cfg.work)}`,`Intervalo configurado: ${dur(cfg.lunch)}`,'','Cálculo de apoio; confirme as regras com a coordenação.'].join('\n');
+}
+
+document.addEventListener('input',e=>{
+  const id=e.target.id,v=e.target.value,t=tm(v);
+  if(id==='te'||id==='tl'){calc();return}
+  if(id==='wk'&&t!=null)cfg.work=t;
+  else if(id==='mf'&&t!=null)cfg.maxFirst=t;
+  else if(id==='ex'&&t!=null)cfg.extra=t;
+  else if(id==='lu'&&v!==''&&+v>=0&&+v<=240)cfg.lunch=+v;
+  else return;
+  save();sync();calc();
+});
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-w],[data-l]');if(!b)return;
+  if(b.dataset.w)cfg.work=+b.dataset.w;
+  if(b.dataset.l)cfg.lunch=+b.dataset.l;
+  save();sync();calc();
+});
+$('#clearTimes').addEventListener('click',()=>{$('#te').value='';$('#tl').value='';calc();$('#te').focus()});
+$('#simpleMode').addEventListener('click',()=>setMode('simple'));
+$('#guidedMode').addEventListener('click',()=>setMode('guided'));
+$('#themeBtn').addEventListener('click',()=>{
+  const root=document.documentElement,now=root.getAttribute('data-theme');
+  const next=now==='dark'?'light':'dark';root.setAttribute('data-theme',next);
+  try{localStorage.setItem('cleitoncalc.theme',next)}catch(e){}
+});
+try{const th=localStorage.getItem('cleitoncalc.theme');if(th)document.documentElement.setAttribute('data-theme',th)}catch(e){}
+$('#shareResult').addEventListener('click',async()=>{
+  const text=resultText();
+  try{
+    if(navigator.share)await navigator.share({title:'Resumo da jornada — CleitonCalc',text});
+    else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);$('#shareResult').textContent='Resultado copiado!';}
+    else {const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();$('#shareResult').textContent='Resultado copiado!';}
+  }catch(e){if(e.name!=='AbortError')alert('Não foi possível compartilhar automaticamente. Copie os horários exibidos.')}
+});
+document.querySelectorAll('[data-alarm]').forEach(btn=>btn.addEventListener('click',()=>{
+  const value=$('#'+btn.dataset.alarm).textContent;
+  if(!/^\\d{2}:\\d{2}$/.test(value))return;
+  const [hour,minute]=value.split(':').map(Number);
+  const names={rA:'Sair para o almoço — CleitonCalc',rB:'Voltar do almoço — CleitonCalc',rC:'Fim da jornada — CleitonCalc',rD:'Limite máximo — CleitonCalc'};
+  const message=names[btn.dataset.alarm]||'Lembrete CleitonCalc';
+  const isAndroid=/Android/i.test(navigator.userAgent);
+  if(!isAndroid){
+    alert('A criação automática de alarmes pelo navegador é compatível com Android. Neste aparelho, abra o aplicativo Relógio e cadastre '+value+' manualmente.');
+    return;
+  }
+  // Android intent URI: SET_ALARM is handled by the device's Clock app.
+  // Use the intent: scheme (not intent://) and launch synchronously from the tap.
+  const intent='intent:#Intent;action=android.intent.action.SET_ALARM;'+
+    'i.android.intent.extra.alarm.HOUR='+hour+';'+
+    'i.android.intent.extra.alarm.MINUTES='+minute+';'+
+    'S.android.intent.extra.alarm.MESSAGE='+encodeURIComponent(message)+';'+
+    'B.android.intent.extra.alarm.SKIP_UI=false;end';
+  let appOpened=false;
+  const markOpened=()=>{appOpened=true;};
+  window.addEventListener('blur',markOpened,{once:true});
+  const onVisibility=()=>{if(document.visibilityState==='hidden')markOpened();};
+  document.addEventListener('visibilitychange',onVisibility,{once:true});
+  const link=document.createElement('a');
+  link.href=intent;
+  link.style.display='none';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(()=>{
+    if(!appOpened && document.visibilityState==='visible'){
+      alert('Não foi possível abrir o Relógio automaticamente. Abra o app Relógio do celular e cadastre o alarme para '+value+'.');
+    }
+    window.removeEventListener('blur',markOpened);
+    document.removeEventListener('visibilitychange',onVisibility);
+  },1600);
+}));
+sync();calc();
+</script>
+</body>
+</html>
