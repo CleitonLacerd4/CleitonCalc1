@@ -160,6 +160,17 @@ main{padding-bottom:12px}
 .res{margin-top:16px}
 .big{font-size:clamp(1.55rem,5vw,2rem)}
 footer{padding:18px 0 24px}
+
+/* Campos principais: rótulos alinhados e seletores com dimensões uniformes */
+.calc-card .fg{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.calc-card .fg>label{display:flex;flex-direction:column;min-width:0;line-height:1.3}
+.calc-card .fg>label{min-height:78px}
+.calc-card .fg>label input{height:48px;min-height:48px;margin-top:auto;width:100%;font-size:1rem}
+@media(max-width:380px){
+  .calc-card .fg{gap:9px}
+  .calc-card .fg>label{font-size:.82rem}
+}
+
 </style>
 </head>
 <body>
@@ -187,14 +198,15 @@ footer{padding:18px 0 24px}
     <section class="card calc-card" aria-label="Calculadora de ponto">
       <h2>Registrar o dia</h2>
       <div class="fg">
-        <label>Hora de entrada<input type="time" id="te"></label>
-        <label>Saída para o almoço<input type="time" id="tl"></label>
-        <label>Saída do trabalho (real)<input type="time" id="tf"></label>
+        <label>Horário de entrada<input type="time" id="te"></label>
+        <label>Saída para o intervalo<input type="time" id="tl"></label>
+        <label>Volta do intervalo<input type="time" id="tr"></label>
+        <label>Saída<input type="time" id="tf"></label>
       </div>
       <div class="print-heading"><h2>Relatório de horários — CleitonCalc</h2></div>
       <div class="res">
-        <div class="r"><small>Sair para o almoço até</small><div class="big" id="rA">--:--</div></div>
-        <div class="r"><small>Volta do almoço</small><div class="big" id="rB">--:--</div></div>
+        <div class="r"><small>Sair para o intervalo até</small><div class="big" id="rA">--:--</div></div>
+        <div class="r"><small>Volta do intervalo</small><div class="big" id="rB">--:--</div></div>
         <div class="r"><small>Saída ideal da jornada</small><div class="big" id="rC">--:--</div></div>
         <div class="r am"><small>Limite máximo configurado</small><div class="big" id="rD">--:--</div></div>
         <div class="r"><small>Tempo trabalhado (real)</small><div class="big" id="rE">--:--</div></div>
@@ -262,20 +274,34 @@ function sync(){
 }
 let viewMode='simple';
 function calc(){
-  const en=tm($('#te').value),ls=tm($('#tl').value),fd=tm($('#tf').value),al=[];
+  const en=tm($('#te').value),ls=tm($('#tl').value),ret=tm($('#tr').value),fd=tm($('#tf').value),al=[];
   let lo=null,vo=null,ex=null,lim=null,validLunch=false,actual=null,balance=null;
   if(en!=null){lo=en+cfg.maxFirst;ex=en+cfg.work+cfg.lunch;lim=ex+cfg.extra}
   if(en!=null&&ls!=null){
     if(ls<=en)al.push(['e','A saída para o almoço precisa ser depois da entrada, no mesmo dia.']);
     else if(ls-en>cfg.maxFirst)al.push(['e',`O intervalo foi informado após ${dur(cfg.maxFirst)} de trabalho. O horário-limite calculado era ${fm(lo)}.`]);
-    else {vo=ls+cfg.lunch;validLunch=true;}
+    else {
+      const automaticReturn=ls+cfg.lunch;
+      if(ret!=null){
+        let adjusted=ret;
+        if(adjusted<=ls)adjusted+=1440;
+        if(adjusted-ls>720)al.push(['e','A volta do almoço precisa ser posterior à saída para o almoço.']);
+        else {vo=adjusted;validLunch=true;}
+      } else {vo=automaticReturn;validLunch=true;}
+    }
   }
   if(en==null)al.push(['w','Informe a hora de entrada para calcular sua jornada.']);
   else al.push(['w',`Saída ideal: ${fm(ex)}. Limite máximo configurado: ${fm(lim)} (inclui até ${dur(cfg.extra)} além da jornada prevista).`]);
   if(en!=null&&fd!=null){
-    let elapsed=fd-en;if(elapsed<=0)elapsed+=1440;
-    actual=Math.max(0,elapsed-(validLunch?cfg.lunch:0));balance=actual-cfg.work;
-    if(ls!=null&&!validLunch)al.push(['w','A saída para o almoço não foi validada e não foi descontada do tempo trabalhado.']);
+    let finish=fd;if(finish<=en)finish+=1440;
+    if(ls!=null&&validLunch&&vo!=null){
+      let lunchOut=ls;if(lunchOut<=en)lunchOut+=1440;
+      let lunchBack=vo;if(lunchBack<=lunchOut)lunchBack+=1440;
+      if(lunchBack>finish)al.push(['e','A volta do almoço não pode ser depois da saída do trabalho.']);
+      else actual=Math.max(0,(lunchOut-en)+(finish-lunchBack));
+    } else if(ls==null) actual=Math.max(0,finish-en);
+    else al.push(['w','A saída/volta do almoço não foi validada e o tempo trabalhado real não pôde ser calculado.']);
+    if(actual!=null)balance=actual-cfg.work;
   }
   for(const [id,v] of [['#rA',lo],['#rB',vo],['#rC',ex],['#rD',lim]])$(id).textContent=v==null?'--:--':fm(v);
   $('#rE').textContent=actual==null?'--:--':dur(actual);
@@ -289,7 +315,7 @@ function calc(){
   const steps=$('#steps');steps.hidden=!(viewMode==='guided'&&en!=null);
   steps.innerHTML=en==null?'':[
     `Entrada registrada: ${fm(en)}`,`Inicie o intervalo até: ${fm(lo)}`,
-    validLunch?`Saída para o almoço: ${fm(ls)} · retorno previsto: ${fm(vo)}`:'Informe a saída para o almoço para calcular o retorno.',
+    validLunch?`Saída para o almoço: ${fm(ls)} · volta: ${fm(vo)}${ret!=null?' (editada)':' (calculada)'}`:'Informe a saída para o almoço para calcular o retorno.',
     `Fim ideal da jornada: ${fm(ex)}`,`Limite configurado com extra: ${fm(lim)}`,
     fd!=null&&actual!=null?`Saída real: ${fm(fd)} · tempo trabalhado: ${dur(actual)} · saldo: ${balance>=0?'+':'−'}${dur(Math.abs(balance))}`:'Informe a saída real para calcular o extra realizado.'
   ].map(x=>`<li>${esc(x)}</li>`).join('');
@@ -307,14 +333,14 @@ function setMode(mode){
   calc();
 }
 function resultText(){
-  const en=$('#te').value,ls=$('#tl').value,fd=$('#tf').value;
+  const en=$('#te').value,ls=$('#tl').value,rt=$('#tr').value,fd=$('#tf').value;
   if(!en)return 'CleitonCalc — Informe a hora de entrada para calcular.';
-  return ['CleitonCalc — Resumo da jornada',`Entrada: ${en}`,`Sair para o almoço até: ${$('#rA').textContent}`,`Saída para o almoço: ${ls||'não informada'}`,`Retorno previsto: ${$('#rB').textContent}`,`Saída ideal: ${$('#rC').textContent}`,`Limite máximo configurado: ${$('#rD').textContent}`,`Saída real: ${fd||'não informada'}`,`Tempo trabalhado real: ${$('#rE').textContent}`,`Extra realizado / saldo: ${$('#rF').textContent}`,`Jornada diária configurada: ${dur(cfg.work)}`,`Intervalo configurado: ${dur(cfg.lunch)}`,'','Cálculo de apoio; confirme as regras com a coordenação.'].join('\n');
+  return ['CleitonCalc — Resumo da jornada',`Entrada: ${en}`,`Sair para o intervalo até: ${$('#rA').textContent}`,`Saída para o almoço: ${ls||'não informada'}`,`Volta do intervalo (informada ou calculada): ${$('#rB').textContent}`,`Saída ideal: ${$('#rC').textContent}`,`Limite máximo configurado: ${$('#rD').textContent}`,`Saída real: ${fd||'não informada'}`,`Tempo trabalhado real: ${$('#rE').textContent}`,`Extra realizado / saldo: ${$('#rF').textContent}`,`Jornada diária configurada: ${dur(cfg.work)}`,`Intervalo configurado: ${dur(cfg.lunch)}`,'','Cálculo de apoio; confirme as regras com a coordenação.'].join('\n');
 }
 
 document.addEventListener('input',e=>{
   const id=e.target.id,v=e.target.value,t=tm(v);
-  if(id==='te'||id==='tl'||id==='tf'){calc();return}
+  if(id==='te'||id==='tl'||id==='tr'||id==='tf'){calc();return}
   if(id==='wk'&&t!=null)cfg.work=t;
   else if(id==='mf'&&t!=null)cfg.maxFirst=t;
   else if(id==='ex'&&t!=null)cfg.extra=t;
@@ -328,7 +354,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.l)cfg.lunch=+b.dataset.l;
   save();sync();calc();
 });
-$('#clearTimes').addEventListener('click',()=>{$('#te').value='';$('#tl').value='';$('#tf').value='';calc();$('#te').focus()});
+$('#clearTimes').addEventListener('click',()=>{$('#te').value='';$('#tl').value='';$('#tr').value='';$('#tf').value='';calc();$('#te').focus()});
 $('#simpleMode').addEventListener('click',()=>setMode('simple'));
 $('#guidedMode').addEventListener('click',()=>setMode('guided'));
 $('#themeBtn').addEventListener('click',()=>{
