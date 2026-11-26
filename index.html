@@ -171,6 +171,12 @@ footer{padding:18px 0 24px}
   .calc-card .fg>label{font-size:.82rem}
 }
 
+
+.reporter-fields{margin:12px 0;padding:12px}
+.reporter-fields h3{margin:0 0 8px}
+.reporter-fields .fg{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:420px){.reporter-fields .fg{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -197,6 +203,14 @@ footer{padding:18px 0 24px}
   <div class="calcgrid">
     <section class="card calc-card" aria-label="Calculadora de ponto">
       <h2>Registrar o dia</h2>
+      <div class="card reporter-fields">
+        <h3>Identificação de quem está emitindo o relatório</h3>
+        <div class="fg">
+          <label>Nome<input type="text" id="reporterName" maxlength="100" placeholder="Digite seu nome"></label>
+          <label>Setor<input type="text" id="reporterSector" maxlength="100" placeholder="Digite seu setor"></label>
+        </div>
+        <p class="helper">Essas informações aparecerão no PDF deste registro de ponto.</p>
+      </div>
       <div class="fg">
         <label>Horário de entrada<input type="time" id="te"></label>
         <label>Saída para o intervalo<input type="time" id="tl"></label>
@@ -251,7 +265,7 @@ footer{padding:18px 0 24px}
       <p class="helper" style="margin-top:12px">Os ajustes ficam salvos somente neste dispositivo e navegador. Se tiver dúvida, confirme a jornada e os limites com a coordenação.</p>
     </section>
   </div>
-  <div class="card">
+<div class="card">
     <p class="helper">Esta ferramenta é uma calculadora de apoio. Ela não registra ponto, não substitui o sistema oficial de controle de jornada e não valida regras trabalhistas individuais.</p>
   </div>
 </main>
@@ -264,10 +278,12 @@ const tm=v=>{const m=/^(\d{1,2}):(\d{2})$/.exec(v||'');return m?+m[1]*60+ +m[2]:
 const fm=n=>{n=((Math.round(n)%1440)+1440)%1440;return pad(Math.floor(n/60))+':'+pad(n%60)};
 const dur=n=>Math.floor(n/60)+':'+pad(n%60);
 const KEY='cleitoncalc.calculadora.ponto.v1';
-let cfg={work:440,lunch:60,maxFirst:360,extra:120};
+let cfg={work:440,lunch:60,maxFirst:360,extra:120,reporterName:'',reporterSector:''};
 try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved)cfg=Object.assign(cfg,saved)}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(cfg))}catch(e){}}
 function sync(){
+  if($('#reporterName')&&document.activeElement!==$('#reporterName'))$('#reporterName').value=cfg.reporterName||'';
+  if($('#reporterSector')&&document.activeElement!==$('#reporterSector'))$('#reporterSector').value=cfg.reporterSector||'';
   document.querySelectorAll('#cw button').forEach(b=>b.classList.toggle('on',+b.dataset.w===cfg.work));
   document.querySelectorAll('#cl button').forEach(b=>b.classList.toggle('on',+b.dataset.l===cfg.lunch));
   for(const [id,v] of [['wk',fm(cfg.work)],['mf',fm(cfg.maxFirst)],['ex',fm(cfg.extra)],['lu',cfg.lunch]])if(document.activeElement!==$('#'+id))$('#'+id).value=v;
@@ -363,7 +379,115 @@ $('#themeBtn').addEventListener('click',()=>{
   try{localStorage.setItem('cleitoncalc.theme',next)}catch(e){}
 });
 try{const th=localStorage.getItem('cleitoncalc.theme');if(th)document.documentElement.setAttribute('data-theme',th)}catch(e){}
-$('#exportPdf').addEventListener('click',()=>{calc();window.print()});
+function reportTimestamp(){
+  return new Date().toLocaleString('pt-BR',{
+    day:'2-digit',month:'2-digit',year:'numeric',
+    hour:'2-digit',minute:'2-digit',second:'2-digit',
+    hourCycle:'h23'
+  });
+}
+function openPrintableReport(title,subtitle,content){
+  const w=window.open('','_blank');
+  if(!w){alert('O navegador bloqueou a janela do relatório. Permita pop-ups para este site e tente novamente.');return}
+  const generated=reportTimestamp();
+  w.document.open();
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} — CleitonCalc</title>
+  <style>
+  @page{size:A4 portrait;margin:14mm}*{box-sizing:border-box}
+  body{font:10px/1.5 Arial,Helvetica,sans-serif;color:#1b2b31;margin:0}
+  header{background:#0e6b52;color:#fff;padding:18px 22px;border-radius:9px;margin-bottom:18px}
+  .brand{font-size:10px;letter-spacing:2px;text-transform:uppercase;opacity:.85;font-weight:bold}
+  h1{font-size:22px;margin:5px 0}.sub{font-size:11px;opacity:.9}
+  h2{font-size:14px;color:#0e6b52;margin:18px 0 8px;border-bottom:2px solid #dce8e3;padding-bottom:5px}
+  table{width:100%;border-collapse:collapse;margin:8px 0 16px}
+  th{background:#eaf2ef;color:#24453b;text-align:left;font-size:9px;text-transform:uppercase}
+  th,td{padding:8px;border-bottom:1px solid #dce4e1;vertical-align:top}
+  .note{margin-top:18px;padding:10px;background:#f3f6f4;border-radius:7px;color:#53635c}
+  footer{margin-top:18px;padding-top:8px;border-top:1px solid #dce4e1;color:#718078;display:flex;justify-content:space-between;font-size:9px}
+  @media print{header{print-color-adjust:exact;-webkit-print-color-adjust:exact}tr{break-inside:avoid}}
+  </style></head><body>
+  <header><div class="brand">CleitonCalc</div><h1>${esc(title)}</h1><div class="sub">${esc(subtitle)}</div>
+  <div class="sub" style="margin-top:8px">Gerado em: ${esc(generated)}</div>
+  <div class="sub" style="margin-top:5px"><b>Emitido por:</b> ${esc(cfg.reporterName||'Não informado')} &nbsp; <b>Setor:</b> ${esc(cfg.reporterSector||'Não informado')}</div></header>
+  ${content}
+  <footer><span>CleitonCalc · Desenvolvido por Cleiton Lacerda</span><span>${esc(title)}</span></footer>
+  <script>window.onload=()=>setTimeout(()=>window.print(),350);<\/script></body></html>`);
+  w.document.close();
+}
+function reportPoint(){
+  calc();
+  const w=window.open('','_blank');
+  if(!w){
+    alert('O navegador bloqueou a abertura do relatório. Permita pop-ups para este site e tente novamente.');
+    return;
+  }
+  const generated=reportTimestamp();
+  const now=new Date();
+  const dateLabel=now.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const val=id=>(($(id)?.value||'').trim()||'Não informado');
+  const shown=id=>(($(id)?.textContent||'').trim()||'--:--');
+  const rows=[
+    ['Horário de entrada',val('#te')],
+    ['Saída para o intervalo',val('#tl')],
+    ['Volta do intervalo informada',val('#tr')],
+    ['Saída',val('#tf')],
+    ['Sair para o intervalo até',shown('#rA')],
+    ['Volta do intervalo calculada',shown('#rB')],
+    ['Saída ideal da jornada',shown('#rC')],
+    ['Limite máximo configurado',shown('#rD')],
+    ['Tempo trabalhado (real)',shown('#rE')],
+    ['Extra realizado / saldo',shown('#rF')],
+    ['Jornada diária configurada',dur(cfg.work)],
+    ['Duração do intervalo configurada',dur(cfg.lunch)],
+    ['Pausa obrigatória após',dur(cfg.maxFirst)],
+    ['Máximo de hora extra configurado',dur(cfg.extra)]
+  ];
+  const notices=Array.from(document.querySelectorAll('#al .al')).map(el=>el.textContent.trim()).filter(Boolean);
+  const noticeHtml=notices.length
+    ? `<div class="note"><b>Observações da calculadora</b><ul>${notices.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`
+    : '';
+  const content=`
+    <p class="meta"><b>Data de referência:</b> ${esc(dateLabel)}</p>
+    <h2>Registro de horários e resultados</h2>
+    <table><thead><tr><th>Descrição</th><th>Horário / resultado</th></tr></thead>
+    <tbody>${rows.map(([label,value])=>`<tr><td>${esc(label)}</td><td>${esc(value)}</td></tr>`).join('')}</tbody></table>
+    ${noticeHtml}
+    <div class="note">Relatório gerado pela calculadora de apoio CleitonCalc. Este documento não substitui o registro oficial de ponto nem valida regras trabalhistas individuais.</div>`;
+  w.document.open();
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Relatório de horários — CleitonCalc</title>
+  <style>
+    @page{size:A4 portrait;margin:14mm}*{box-sizing:border-box}
+    body{font:10px/1.5 Arial,Helvetica,sans-serif;color:#1b2b31;margin:0}
+    header{background:#0e6b52;color:#fff;padding:18px 22px;border-radius:9px;margin-bottom:18px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+    .brand{font-size:10px;letter-spacing:2px;text-transform:uppercase;opacity:.9;font-weight:bold}
+    h1{font-size:22px;margin:5px 0}.sub{font-size:11px;opacity:.95}
+    .meta{margin:0 0 12px}
+    h2{font-size:14px;color:#0e6b52;margin:18px 0 8px;border-bottom:2px solid #dce8e3;padding-bottom:5px}
+    table{width:100%;border-collapse:collapse;margin:8px 0 16px}
+    th{background:#eaf2ef;color:#24453b;text-align:left;font-size:9px;text-transform:uppercase;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+    th,td{padding:8px;border-bottom:1px solid #dce4e1;vertical-align:top}
+    td:last-child{font-weight:600;font-variant-numeric:tabular-nums}
+    tr{break-inside:avoid}
+    .note{margin-top:14px;padding:10px;background:#f3f6f4;border-radius:7px;color:#53635c;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+    .note ul{margin:5px 0 0;padding-left:18px}
+    footer{margin-top:18px;padding-top:8px;border-top:1px solid #dce4e1;color:#718078;display:flex;justify-content:space-between;font-size:9px}
+  </style></head><body>
+  <header><div class="brand">CleitonCalc</div><h1>Relatório de horários</h1>
+    <div class="sub">${esc(dateLabel)}</div>
+    <div class="sub" style="margin-top:8px"><b>Gerado em:</b> ${esc(generated)}</div>
+    <div class="sub" style="margin-top:5px"><b>Emitido por:</b> ${esc(cfg.reporterName||'Não informado')} &nbsp; <b>Setor:</b> ${esc(cfg.reporterSector||'Não informado')}</div>
+  </header>
+  ${content}
+  <footer><span>CleitonCalc · Desenvolvido por Cleiton Lacerda</span><span>Relatório de horários</span></footer>
+  <script>window.onload=()=>setTimeout(()=>window.print(),450);<\/script>
+  </body></html>`);
+  w.document.close();
+}
+$('#exportPdf').addEventListener('click',reportPoint);
+$('#reporterName').addEventListener('input',e=>{cfg.reporterName=e.target.value;save()});
+$('#reporterSector').addEventListener('input',e=>{cfg.reporterSector=e.target.value;save()});
 $('#shareResult').addEventListener('click',async()=>{
   const text=resultText();
   try{
